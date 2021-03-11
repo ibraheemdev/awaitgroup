@@ -1,9 +1,9 @@
-# Async WaitGroup
+# AwaitGroup
 
-[![Documentation](https://img.shields.io/badge/docs-0.1.0-4d76ae?style=for-the-badge)](https://docs.rs/async_waitgroup/0.1.0)
-[![Version](https://img.shields.io/crates/v/async-waitgroup?style=for-the-badge)](https://crates.io/crates/async-waitgroup)
-[![License](https://img.shields.io/crates/l/async-waitgroup?style=for-the-badge)](https://crates.io/crates/async-waitgroup)
-[![Actions](https://img.shields.io/github/workflow/status/ibraheemdev/async-waitgroup/Rust/master?style=for-the-badge)](https://github.com/ibraheemdev/async-waitgroup/actions)
+[![Documentation](https://img.shields.io/badge/docs-0.1.0-4d76ae?style=for-the-badge)](https://docs.rs/awaitgroup/0.1.0)
+[![Version](https://img.shields.io/crates/v/awaitgroup?style=for-the-badge)](https://crates.io/crates/awaitgroup)
+[![License](https://img.shields.io/crates/l/awaitgroup?style=for-the-badge)](https://crates.io/crates/awaitgroup)
+[![Actions](https://img.shields.io/github/workflow/status/ibraheemdev/awaitgroup/Rust/master?style=for-the-badge)](https://github.com/ibraheemdev/awaitgroup/actions)
 
  An asynchronous implementation of a `WaitGroup`.
 
@@ -12,7 +12,7 @@
  finished. The main task can call `await` to block until all other tasks have finished.
 
  ```rust
- use async_waitgroup::WaitGroup;
+ use awaitgroup::WaitGroup;
 
  #[tokio::main]
  async fn main() {

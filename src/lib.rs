@@ -10,7 +10,7 @@
 //! # fn main() {
 //! # let rt = tokio::runtime::Builder::new_current_thread().build().unwrap();
 //! # rt.block_on(async {
-//! use async_waitgroup::WaitGroup;
+//! use awaitgroup::WaitGroup;
 //!
 //! let wg = WaitGroup::new();
 //!
