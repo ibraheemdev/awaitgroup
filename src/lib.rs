@@ -27,7 +27,38 @@
 //! }
 //!
 //! // Block until all other tasks have finished their work.
-//! wg.await;
+//! wg.wait().await;
+//! # });
+//! # }
+//! ```
+//!
+//! A `WaitGroup` can be re-used and awaited multiple times.
+//! ```rust
+//! # use awaitgroup::WaitGroup;
+//! # fn main() {
+//! # let rt = tokio::runtime::Builder::new_current_thread().build().unwrap();
+//! # rt.block_on(async {
+//! let wg = WaitGroup::new();
+//!
+//! let worker = wg.worker();
+//!
+//! tokio::spawn(async {
+//!     // Do work...
+//!     worker.done();
+//! });
+//!
+//! // Wait for tasks to finish
+//! wg.wait().await;
+//!
+//! // Re-use wait group
+//! let worker = wg.worker();
+//!
+//! tokio::spawn(async {
+//!     // Do more work...
+//!     worker.done();
+//! });
+//!
+//! wg.wait().await;
 //! # });
 //! # }
 //! ```
@@ -45,7 +76,7 @@ pub struct WaitGroup {
 
 #[allow(clippy::new_without_default)]
 impl WaitGroup {
-    /// Creates a new waitgroup.
+    /// Creates a new `WaitGroup`.
     pub fn new() -> Self {
         Self {
             inner: Arc::new(WaitGroupInner::new()),
@@ -58,9 +89,19 @@ impl WaitGroup {
             inner: self.inner.clone(),
         }
     }
+
+    /// Wait until all registered workers finish executing.
+    pub fn wait(&self) -> WaitGroupFuture<'_> {
+        WaitGroupFuture { inner: &self.inner }
+    }
 }
 
-impl Future for WaitGroup {
+#[doc(hidden)]
+pub struct WaitGroupFuture<'a> {
+    inner: &'a Arc<WaitGroupInner>,
+}
+
+impl Future for WaitGroupFuture<'_> {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -68,7 +109,6 @@ impl Future for WaitGroup {
         *self.inner.waker.lock().unwrap() = Some(waker);
 
         match Arc::strong_count(&self.inner) {
-            // All workers are done.
             1 => Poll::Ready(()),
             _ => Poll::Pending,
         }
@@ -132,6 +172,7 @@ mod tests {
         let rt = tokio::runtime::Builder::new_current_thread()
             .build()
             .unwrap();
+
         rt.block_on(async {
             let wg = WaitGroup::new();
 
@@ -144,7 +185,38 @@ mod tests {
                 });
             }
 
-            wg.await;
+            wg.wait().await;
+        });
+    }
+
+    #[test]
+    fn test_wait_group_reuse() {
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+
+        rt.block_on(async {
+            let wg = WaitGroup::new();
+
+            for _ in 0..5 {
+                let worker = wg.worker();
+
+                tokio::spawn(async {
+                    tokio::time::sleep(Duration::from_secs(5)).await;
+                    worker.done();
+                });
+            }
+
+            wg.wait().await;
+
+            let worker = wg.worker();
+
+            tokio::spawn(async {
+                tokio::time::sleep(Duration::from_secs(5)).await;
+                worker.done();
+            });
+
+            wg.wait().await;
         });
     }
 }
