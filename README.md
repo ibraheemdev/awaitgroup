@@ -34,3 +34,4 @@
     wg.wait().await;
 }
  ```
+See [the documentation](https://docs.rs/awaitgroup) for more details.
