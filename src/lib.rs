@@ -1,8 +1,13 @@
+//! [![Documentation](https://img.shields.io/badge/docs-0.3.0-4d76ae?style=for-the-badge)](https://docs.rs/awaitgroup/0.3.0)
+//! [![Version](https://img.shields.io/crates/v/awaitgroup?style=for-the-badge)](https://crates.io/crates/awaitgroup)
+//! [![License](https://img.shields.io/crates/l/awaitgroup?style=for-the-badge)](https://crates.io/crates/awaitgroup)
+//! [![Actions](https://img.shields.io/github/workflow/status/ibraheemdev/awaitgroup/Rust/master?style=for-the-badge)](https://github.com/ibraheemdev/awaitgroup/actions)
+//!
 //! An asynchronous implementation of a `WaitGroup`.
 //!
 //! A `WaitGroup` waits for a collection of tasks to finish. The main task can create new workers and
 //! pass them to each of the tasks it wants to wait for. Then, each of the tasks calls `done` when
-//! finished. The main task can call `await` to block until all other tasks have finished.
+//! it finishes executing. The main task can call `wait` to block until all registered workers are done.
 //!
 //! # Examples
 //!
@@ -71,7 +76,7 @@ use std::task::{Context, Poll, Waker};
 ///
 /// Refer to the [crate level documentation](crate) for details.
 pub struct WaitGroup {
-    inner: Arc<WaitGroupInner>,
+    inner: Arc<Inner>,
 }
 
 #[allow(clippy::new_without_default)]
@@ -79,7 +84,7 @@ impl WaitGroup {
     /// Creates a new `WaitGroup`.
     pub fn new() -> Self {
         Self {
-            inner: Arc::new(WaitGroupInner::new()),
+            inner: Arc::new(Inner::new()),
         }
     }
 
@@ -91,14 +96,13 @@ impl WaitGroup {
     }
 
     /// Wait until all registered workers finish executing.
-    pub fn wait(&self) -> WaitGroupFuture<'_> {
+    pub fn wait(&self) -> impl Future + '_ {
         WaitGroupFuture { inner: &self.inner }
     }
 }
 
-#[doc(hidden)]
-pub struct WaitGroupFuture<'a> {
-    inner: &'a Arc<WaitGroupInner>,
+struct WaitGroupFuture<'a> {
+    inner: &'a Arc<Inner>,
 }
 
 impl Future for WaitGroupFuture<'_> {
@@ -115,11 +119,11 @@ impl Future for WaitGroupFuture<'_> {
     }
 }
 
-struct WaitGroupInner {
+struct Inner {
     waker: Mutex<Option<Waker>>,
 }
 
-impl WaitGroupInner {
+impl Inner {
     pub fn new() -> Self {
         Self {
             waker: Mutex::new(None),
@@ -131,7 +135,7 @@ impl WaitGroupInner {
 ///
 /// Refer to the [crate level documentation](crate) for details.
 pub struct Worker {
-    inner: Arc<WaitGroupInner>,
+    inner: Arc<Inner>,
 }
 
 impl Worker {
