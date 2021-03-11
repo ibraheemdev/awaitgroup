@@ -1,6 +1,7 @@
 [package]
 name = "async-waitgroup"
 description = "Wait for a collection of async tasks to finish."
+license = "MIT"
 version = "0.1.0"
 repository = "github.com/ibraheemdev/async-waitgroup"
 authors = ["ibraheemdev <ibrah1440@gmail.com>"]
