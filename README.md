@@ -31,6 +31,6 @@
     }
 
     // Block until all other tasks have finished their work.
-    wg.await;
+    wg.wait().await;
 }
  ```
