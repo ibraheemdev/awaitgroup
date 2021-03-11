@@ -2,7 +2,7 @@
 name = "awaitgroup"
 description = "Wait for a collection of async tasks to finish."
 license = "MIT"
-version = "0.3.0"
+version = "0.4.0"
 repository = "https://github.com/ibraheemdev/awaitgroup"
 authors = ["ibraheemdev <ibrah1440@gmail.com>"]
 edition = "2018"
