@@ -1,0 +1,15 @@
+[package]
+name = "async-waitgroup"
+description = "Wait for a collection of async tasks to finish."
+version = "0.1.0"
+repository = "github.com/ibraheemdev/async-waitgroup"
+authors = ["ibraheemdev <ibrah1440@gmail.com>"]
+edition = "2018"
+keywords = ["waitgroup", "notify", "wake", "futures", "async"]
+categories = ["asynchronous", "concurrency"]
+readme = "README.md"
+
+[dependencies]
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "time"] }
