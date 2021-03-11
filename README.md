@@ -1,9 +1,9 @@
 # Async WaitGroup
 
 [![Documentation](https://img.shields.io/badge/docs-0.1.0-4d76ae?style=for-the-badge)](https://docs.rs/async_waitgroup/0.1.0)
-[![Version](https://img.shields.io/crates/v/async_waitgroup?style=for-the-badge)](https://crates.io/crates/async_waitgroup)
-[![License](https://img.shields.io/crates/l/async_waitgroup?style=for-the-badge)](https://crates.io/crates/async_waitgroup)
-[![Actions](https://img.shields.io/github/workflow/status/ibraheemdev/async_waitgroup/Rust/master?style=for-the-badge)](https://github.com/ibraheemdev/async_waitgroup/actions)
+[![Version](https://img.shields.io/crates/v/async-waitgroup?style=for-the-badge)](https://crates.io/crates/async-waitgroup)
+[![License](https://img.shields.io/crates/l/async-waitgroup?style=for-the-badge)](https://crates.io/crates/async-waitgroup)
+[![Actions](https://img.shields.io/github/workflow/status/ibraheemdev/async-waitgroup/Rust/master?style=for-the-badge)](https://github.com/ibraheemdev/async-waitgroup/actions)
 
  An asynchronous implementation of a `WaitGroup`.
 

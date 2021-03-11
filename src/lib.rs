@@ -43,6 +43,7 @@ pub struct WaitGroup {
     inner: Arc<WaitGroupInner>,
 }
 
+#[allow(clippy::new_without_default)]
 impl WaitGroup {
     /// Creates a new waitgroup.
     pub fn new() -> Self {
