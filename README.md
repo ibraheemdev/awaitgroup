@@ -16,7 +16,7 @@
 
  #[tokio::main]
  async fn main() {
-    let wg = WaitGroup::new();
+    let mut wg = WaitGroup::new();
 
     for _ in 0..5 {
         // Create a new worker.
