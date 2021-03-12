@@ -98,7 +98,7 @@ impl WaitGroup {
     }
 
     /// Wait until all registered workers finish executing.
-    pub async fn wait(&self) {
+    pub async fn wait(&mut self) {
         WaitGroupFuture::new(&self.inner).await
     }
 }
@@ -190,7 +190,7 @@ mod tests {
             .unwrap();
 
         rt.block_on(async {
-            let wg = WaitGroup::new();
+            let mut wg = WaitGroup::new();
 
             for _ in 0..5 {
                 let worker = wg.worker();
@@ -212,7 +212,7 @@ mod tests {
             .unwrap();
 
         rt.block_on(async {
-            let wg = WaitGroup::new();
+            let mut wg = WaitGroup::new();
 
             for _ in 0..5 {
                 let worker = wg.worker();
@@ -243,7 +243,7 @@ mod tests {
             .unwrap();
 
         rt.block_on(async {
-            let wg = WaitGroup::new();
+            let mut wg = WaitGroup::new();
 
             for _ in 0..5 {
                 let worker = wg.worker();
