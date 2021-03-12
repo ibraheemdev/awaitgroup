@@ -17,7 +17,7 @@
 //! # rt.block_on(async {
 //! use awaitgroup::WaitGroup;
 //!
-//! let wg = WaitGroup::new();
+//! let mut wg = WaitGroup::new();
 //!
 //! for _ in 0..5 {
 //!     // Create a new worker.
@@ -43,7 +43,7 @@
 //! # fn main() {
 //! # let rt = tokio::runtime::Builder::new_current_thread().build().unwrap();
 //! # rt.block_on(async {
-//! let wg = WaitGroup::new();
+//! let mut wg = WaitGroup::new();
 //!
 //! let worker = wg.worker();
 //!
