@@ -67,7 +67,7 @@
 //! # });
 //! # }
 //! ```
-#![deny(missing_debug_implementations)]
+#![deny(missing_debug_implementations, rust_2018_idioms)]
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
@@ -82,13 +82,19 @@ pub struct WaitGroup {
     inner: Arc<Inner>,
 }
 
+impl Default for WaitGroup {
+    fn default() -> Self {
+        Self {
+            inner: Arc::new(Inner::new()),
+        }
+    }
+}
+
 #[allow(clippy::new_without_default)]
 impl WaitGroup {
     /// Creates a new `WaitGroup`.
     pub fn new() -> Self {
-        Self {
-            inner: Arc::new(Inner::new()),
-        }
+        Self::default()
     }
 
     /// Register a new worker.
