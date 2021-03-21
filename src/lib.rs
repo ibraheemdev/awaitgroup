@@ -67,6 +67,8 @@
 //! # });
 //! # }
 //! ```
+#![deny(missing_debug_implementations)]
+use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -175,6 +177,20 @@ impl Drop for Worker {
                 waker.wake();
             }
         }
+    }
+}
+
+impl fmt::Debug for WaitGroup {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let count = self.inner.count.load(Ordering::Relaxed);
+        f.debug_struct("WaitGroup").field("count", &count).finish()
+    }
+}
+
+impl fmt::Debug for Worker {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let count = self.inner.count.load(Ordering::Relaxed);
+        f.debug_struct("WaitGroup").field("count", &count).finish()
     }
 }
 
