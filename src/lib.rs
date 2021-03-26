@@ -196,7 +196,7 @@ impl fmt::Debug for WaitGroup {
 impl fmt::Debug for Worker {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let count = self.inner.count.load(Ordering::Relaxed);
-        f.debug_struct("WaitGroup").field("count", &count).finish()
+        f.debug_struct("Worker").field("count", &count).finish()
     }
 }
 
