@@ -90,7 +90,6 @@ impl Default for WaitGroup {
     }
 }
 
-#[allow(clippy::new_without_default)]
 impl WaitGroup {
     /// Creates a new `WaitGroup`.
     pub fn new() -> Self {
