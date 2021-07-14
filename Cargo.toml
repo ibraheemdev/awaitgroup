@@ -13,4 +13,4 @@ readme = "README.md"
 [dependencies]
 
 [dev-dependencies]
-tokio = { version = "1", features = ["rt", "time"] }
+tokio = { version = "1", features = [ "rt", "rt-multi-thread", "macros", "time"]}
