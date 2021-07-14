@@ -98,15 +98,28 @@ impl WaitGroup {
 
     /// Register a new worker.
     pub fn worker(&self) -> Worker {
-        self.inner.count.fetch_add(1, Ordering::Relaxed);
+        self.inner.inc_count();
         Worker {
             inner: self.inner.clone(),
         }
     }
 
+    /// No active registered workers. Used for testing.
+    fn has_no_worker(&self) -> bool {
+        let count = self.inner.count.load(Ordering::Relaxed);
+        count == 0
+    }
+
     /// Wait until all registered workers finish executing.
     pub async fn wait(&mut self) {
         WaitGroupFuture::new(&self.inner).await
+    }
+
+    /// Create a child `WaitGroup`.
+    pub fn child(&self) -> Self {
+        Self {
+            inner: Arc::new(Inner::with_parent(&self.inner)),
+        }
     }
 }
 
@@ -137,13 +150,46 @@ impl Future for WaitGroupFuture<'_> {
 struct Inner {
     waker: Mutex<Option<Waker>>,
     count: AtomicUsize,
+    parent: Option<Arc<Inner>>,
 }
 
 impl Inner {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self {
             count: AtomicUsize::new(0),
             waker: Mutex::new(None),
+            parent: None,
+        }
+    }
+
+    fn with_parent(parent: &Arc<Inner>) -> Self {
+        Self {
+            count: AtomicUsize::new(0),
+            waker: Mutex::new(None),
+            parent: Some(parent.clone()),
+        }
+    }
+
+    /// Increment the worker count of current `Inner` and its parent recursively.
+    fn inc_count(&self) {
+        self.count.fetch_add(1, Ordering::Relaxed);
+        if let Some(parent) = &self.parent {
+            parent.inc_count();
+        }
+    }
+
+    /// Decrement the worker count of current `Inner` and its parent recursively.
+    /// If the worker count of `Inner` reaches 0 during recursion, wake the waker in `Inner`.
+    fn dec_count(&self) {
+        let count = self.count.fetch_sub(1, Ordering::Relaxed);
+        // last worker
+        if count == 1 {
+            if let Some(waker) = self.waker.lock().unwrap().take() {
+                waker.wake();
+            }
+        }
+        if let Some(parent) = &self.parent {
+            parent.dec_count();
         }
     }
 }
@@ -166,7 +212,7 @@ impl Clone for Worker {
     /// Cloning a worker increments the primary reference count and returns a new worker for use in
     /// another task.
     fn clone(&self) -> Self {
-        self.inner.count.fetch_add(1, Ordering::Relaxed);
+        self.inner.inc_count();
         Self {
             inner: self.inner.clone(),
         }
@@ -175,13 +221,7 @@ impl Clone for Worker {
 
 impl Drop for Worker {
     fn drop(&mut self) {
-        let count = self.inner.count.fetch_sub(1, Ordering::Relaxed);
-        // We are the last worker
-        if count == 1 {
-            if let Some(waker) = self.inner.waker.lock().unwrap().take() {
-                waker.wake();
-            }
-        }
+        self.inner.dec_count();
     }
 }
 
@@ -202,83 +242,143 @@ impl fmt::Debug for Worker {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
+    use std::time::{Duration, Instant};
 
-    #[test]
-    fn test_wait_group() {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .build()
-            .unwrap();
-
-        rt.block_on(async {
-            let mut wg = WaitGroup::new();
-
-            for _ in 0..5 {
-                let worker = wg.worker();
-
-                tokio::spawn(async {
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                    worker.done();
-                });
+    /// macro to assert that left is greater than right.
+    macro_rules! assert_gt {
+        ($left:expr, $right:expr) => ({
+            let (left, right) = (&($left), &($right));
+            if !(left > right) {
+                panic!("assertion failed: `(left > right)`\n  left: `{:?}`,\n right: `{:?}`",
+                       left, right);
             }
-
-            wg.wait().await;
         });
+        ($left:expr, $right:expr, ) => ({
+            assert_gt!($left, $right);
+        });
+        ($left:expr, $right:expr, $($msg_args:tt)+) => ({
+            let (left, right) = (&($left), &($right));
+            if !(left > right) {
+                panic!("assertion failed: `(left > right)`\n  left: `{:?}`,\n right: `{:?}`: {}",
+                       left, right, format_args!($($msg_args)+));
+            }
+        })
     }
 
-    #[test]
-    fn test_wait_group_reuse() {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .build()
-            .unwrap();
+    /// macro to assert that the duration from `start` to now is longer than `elasped`.  
+    macro_rules! assert_elasped_gt {
+        ($start: expr, $elasped: expr) => ({
+            assert_gt!(Instant::now() - $start, $elasped);
+        });
+        ($start: expr, $elasped: expr, ) => ({
+            assert_elasped_gt!($start, $elapsed);
+        });
+        ($start: expr, $elasped: expr, $($msg_args:tt)+) => ({
+            assert_elasped_gt!($start, $elasped, $($msg_args:tt)+);
+        })
+    }
 
-        rt.block_on(async {
-            let mut wg = WaitGroup::new();
+    #[tokio::test]
+    async fn test_wait_group() {
+        let mut wg = WaitGroup::new();
+        let start = Instant::now();
 
-            for _ in 0..5 {
-                let worker = wg.worker();
-
-                tokio::spawn(async {
-                    tokio::time::sleep(Duration::from_secs(5)).await;
-                    worker.done();
-                });
-            }
-
-            wg.wait().await;
-
+        for i in 0..5 {
             let worker = wg.worker();
-
-            tokio::spawn(async {
-                tokio::time::sleep(Duration::from_secs(5)).await;
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(i * 100)).await;
                 worker.done();
             });
+        }
 
-            wg.wait().await;
-        });
+        wg.wait().await;
+        assert_elasped_gt!(start, Duration::from_millis(400));
     }
 
-    #[test]
-    fn test_worker_clone() {
-        let rt = tokio::runtime::Builder::new_current_thread()
-            .build()
-            .unwrap();
+    #[tokio::test]
+    async fn test_wait_group_reuse() {
+        let mut wg = WaitGroup::new();
+        let start = Instant::now();
 
-        rt.block_on(async {
-            let mut wg = WaitGroup::new();
+        for i in 0..5 {
+            let worker = wg.worker();
 
-            for _ in 0..5 {
-                let worker = wg.worker();
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(i * 100)).await;
+                worker.done();
+            });
+        }
 
-                tokio::spawn(async {
-                    let nested_worker = worker.clone();
-                    tokio::spawn(async {
-                        nested_worker.done();
-                    });
-                    worker.done();
-                });
-            }
+        wg.wait().await;
+        assert_elasped_gt!(start, Duration::from_millis(400));
 
-            wg.wait().await;
+        let worker = wg.worker();
+        let start = Instant::now();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(500)).await;
+            worker.done();
         });
+
+        wg.wait().await;
+        assert_elasped_gt!(start, Duration::from_millis(500));
+    }
+
+    #[tokio::test]
+    async fn test_worker_clone() {
+        let mut wg = WaitGroup::new();
+        let start = Instant::now();
+
+        for i in 0..5 {
+            let worker = wg.worker();
+
+            tokio::spawn(async move {
+                let nested_worker = worker.clone();
+                tokio::spawn(async move {
+                    tokio::time::sleep(Duration::from_millis(i * 100)).await;
+                    nested_worker.done();
+                });
+                worker.done();
+            });
+        }
+
+        wg.wait().await;
+        assert_elasped_gt!(start, Duration::from_millis(400));
+    }
+
+    #[tokio::test]
+    async fn test_child_wait_group() {
+        let mut wg = WaitGroup::new();
+        let worker = wg.worker();
+
+        let mut child_wg = wg.child();
+        let start = Instant::now();
+        for _ in 0..5 {
+            let child_worker = child_wg.worker();
+
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(200)).await;
+                child_worker.done();
+            });
+        }
+
+        child_wg.wait().await;
+        assert_elasped_gt!(start, Duration::from_millis(200));
+        assert_eq!(wg.has_no_worker(), false);
+
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            worker.done();
+        });
+        wg.wait().await;
+        assert_elasped_gt!(start, Duration::from_millis(300));
+
+        let child_worker = child_wg.worker();
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            child_worker.done();
+        });
+        child_wg.wait().await;
+        wg.wait().await;
+        assert_elasped_gt!(start, Duration::from_millis(400));
     }
 }
