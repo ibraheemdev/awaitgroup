@@ -11,7 +11,8 @@ categories = ["asynchronous", "concurrency"]
 readme = "README.md"
 
 [dependencies]
-futures = "0.3"
+atomic-waker = "1.0.0"
+
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "time"] }

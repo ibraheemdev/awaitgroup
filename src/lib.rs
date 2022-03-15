@@ -75,7 +75,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::task::{Context, Poll};
 
-use futures::task::AtomicWaker;
+use atomic_waker::AtomicWaker;
 
 /// Wait for a collection of tasks to finish execution.
 ///
