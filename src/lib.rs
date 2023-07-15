@@ -127,7 +127,7 @@ impl Future for WaitGroupFuture<'_> {
         if self.inner.count.load(Ordering::Relaxed) == 0 {
             return Poll::Ready(());
         }
-      
+
         let waker = cx.waker().clone();
         *self.inner.waker.lock().unwrap() = Some(waker);
 
