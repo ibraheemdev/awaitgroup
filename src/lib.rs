@@ -124,6 +124,10 @@ impl Future for WaitGroupFuture<'_> {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        if self.inner.count.load(Ordering::Relaxed) == 0 {
+            return Poll::Ready(());
+        }
+      
         let waker = cx.waker().clone();
         *self.inner.waker.lock().unwrap() = Some(waker);
 
