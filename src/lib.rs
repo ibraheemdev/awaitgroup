@@ -72,10 +72,8 @@ use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Arc;
-use std::task::{Context, Poll};
-
-use atomic_waker::AtomicWaker;
+use std::sync::{Arc, Mutex};
+use std::task::{Context, Poll, Waker};
 
 /// Wait for a collection of tasks to finish execution.
 ///
@@ -126,7 +124,8 @@ impl Future for WaitGroupFuture<'_> {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        self.inner.waker.register(cx.waker());
+        let waker = cx.waker().clone();
+        *self.inner.waker.lock().unwrap() = Some(waker);
 
         match self.inner.count.load(Ordering::Relaxed) {
             0 => Poll::Ready(()),
@@ -136,7 +135,7 @@ impl Future for WaitGroupFuture<'_> {
 }
 
 struct Inner {
-    waker: AtomicWaker,
+    waker: Mutex<Option<Waker>>,
     count: AtomicUsize,
 }
 
@@ -144,7 +143,7 @@ impl Inner {
     pub fn new() -> Self {
         Self {
             count: AtomicUsize::new(0),
-            waker: AtomicWaker::new(),
+            waker: Mutex::new(None),
         }
     }
 }
@@ -179,7 +178,7 @@ impl Drop for Worker {
         let count = self.inner.count.fetch_sub(1, Ordering::Relaxed);
         // We are the last worker
         if count == 1 {
-            if let Some(waker) = self.inner.waker.take() {
+            if let Some(waker) = self.inner.waker.lock().unwrap().take() {
                 waker.wake();
             }
         }
